@@ -15,4 +15,6 @@ for in endfor while endwhile
 break continue not and or
 def enddef main return comp
 endcomp of
+@defmacro N "Thomas"
+a = N
 i = k ^ 2;
