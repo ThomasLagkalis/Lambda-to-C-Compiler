@@ -1,0 +1,375 @@
+Terminals unused in grammar
+
+    ID
+    CONST_STRING
+    ASSIGN
+    KW_IF
+    KW_ENDIF
+    KW_THEN
+    KW_ELSE
+    KW_FOR
+    KW_ENDFOR
+    KW_TRUE
+    KW_FALSE
+    KW_INTEGER
+    KW_SCALAR
+    KW_STR
+    KW_BOOL
+    KW_CONST
+    KW_IN
+    KW_WHILE
+    KW_ENDWHILE
+    KW_BREAK
+    KW_CONTINUE
+    KW_NOT
+    KW_AND
+    KW_OR
+    KW_DEF
+    KW_ENDDEF
+    KW_MAIN
+    KW_RETURN
+    KW_COMP
+    KW_ENDCOMP
+    KW_OF
+    OP_POWER
+    OP_ASSIGN
+    OP_LESSEQUAL
+    OP_GREATEREQUAL
+    OP_EQUAL
+    OP_INEQUAL
+
+
+Grammar
+
+    0 $accept: input $end
+
+    1 input: ε
+    2      | input expr ';'
+
+    3 expr: INTEGER
+    4     | FLOAT
+    5     | '(' expr ')'
+    6     | expr '+' expr
+    7     | expr '-' expr
+    8     | expr '*' expr
+    9     | expr '/' expr
+
+
+Terminals, with rules where they appear
+
+    $end (0) 0
+    '(' (40) 5
+    ')' (41) 5
+    '*' (42) 8
+    '+' (43) 6
+    '-' (45) 7
+    '/' (47) 9
+    ';' (59) 2
+    error (256)
+    ID (258)
+    INTEGER <str> (259) 3
+    FLOAT <str> (260) 4
+    CONST_STRING (261)
+    ASSIGN (262)
+    KW_IF (263)
+    KW_ENDIF (264)
+    KW_THEN (265)
+    KW_ELSE (266)
+    KW_FOR (267)
+    KW_ENDFOR (268)
+    KW_TRUE (269)
+    KW_FALSE (270)
+    KW_INTEGER (271)
+    KW_SCALAR (272)
+    KW_STR (273)
+    KW_BOOL (274)
+    KW_CONST (275)
+    KW_IN (276)
+    KW_WHILE (277)
+    KW_ENDWHILE (278)
+    KW_BREAK (279)
+    KW_CONTINUE (280)
+    KW_NOT (281)
+    KW_AND (282)
+    KW_OR (283)
+    KW_DEF (284)
+    KW_ENDDEF (285)
+    KW_MAIN (286)
+    KW_RETURN (287)
+    KW_COMP (288)
+    KW_ENDCOMP (289)
+    KW_OF (290)
+    OP_POWER (291)
+    OP_ASSIGN (292)
+    OP_LESSEQUAL (293)
+    OP_GREATEREQUAL (294)
+    OP_EQUAL (295)
+    OP_INEQUAL (296)
+
+
+Nonterminals, with rules where they appear
+
+    $accept (49)
+        on left: 0
+    input (50)
+        on left: 1 2
+        on right: 0 2
+    expr <str> (51)
+        on left: 3 4 5 6 7 8 9
+        on right: 2 5 6 7 8 9
+
+
+State 0
+
+    0 $accept: • input $end
+    1 input: ε •
+    2      | • input expr ';'
+
+    $default  reduce using rule 1 (input)
+
+    input  go to state 1
+
+
+State 1
+
+    0 $accept: input • $end
+    2 input: input • expr ';'
+    3 expr: • INTEGER
+    4     | • FLOAT
+    5     | • '(' expr ')'
+    6     | • expr '+' expr
+    7     | • expr '-' expr
+    8     | • expr '*' expr
+    9     | • expr '/' expr
+
+    $end     shift, and go to state 2
+    INTEGER  shift, and go to state 3
+    FLOAT    shift, and go to state 4
+    '('      shift, and go to state 5
+
+    expr  go to state 6
+
+
+State 2
+
+    0 $accept: input $end •
+
+    $default  accept
+
+
+State 3
+
+    3 expr: INTEGER •
+
+    $default  reduce using rule 3 (expr)
+
+
+State 4
+
+    4 expr: FLOAT •
+
+    $default  reduce using rule 4 (expr)
+
+
+State 5
+
+    3 expr: • INTEGER
+    4     | • FLOAT
+    5     | • '(' expr ')'
+    5     | '(' • expr ')'
+    6     | • expr '+' expr
+    7     | • expr '-' expr
+    8     | • expr '*' expr
+    9     | • expr '/' expr
+
+    INTEGER  shift, and go to state 3
+    FLOAT    shift, and go to state 4
+    '('      shift, and go to state 5
+
+    expr  go to state 7
+
+
+State 6
+
+    2 input: input expr • ';'
+    6 expr: expr • '+' expr
+    7     | expr • '-' expr
+    8     | expr • '*' expr
+    9     | expr • '/' expr
+
+    '-'  shift, and go to state 8
+    '+'  shift, and go to state 9
+    '*'  shift, and go to state 10
+    '/'  shift, and go to state 11
+    ';'  shift, and go to state 12
+
+
+State 7
+
+    5 expr: '(' expr • ')'
+    6     | expr • '+' expr
+    7     | expr • '-' expr
+    8     | expr • '*' expr
+    9     | expr • '/' expr
+
+    '-'  shift, and go to state 8
+    '+'  shift, and go to state 9
+    '*'  shift, and go to state 10
+    '/'  shift, and go to state 11
+    ')'  shift, and go to state 13
+
+
+State 8
+
+    3 expr: • INTEGER
+    4     | • FLOAT
+    5     | • '(' expr ')'
+    6     | • expr '+' expr
+    7     | • expr '-' expr
+    7     | expr '-' • expr
+    8     | • expr '*' expr
+    9     | • expr '/' expr
+
+    INTEGER  shift, and go to state 3
+    FLOAT    shift, and go to state 4
+    '('      shift, and go to state 5
+
+    expr  go to state 14
+
+
+State 9
+
+    3 expr: • INTEGER
+    4     | • FLOAT
+    5     | • '(' expr ')'
+    6     | • expr '+' expr
+    6     | expr '+' • expr
+    7     | • expr '-' expr
+    8     | • expr '*' expr
+    9     | • expr '/' expr
+
+    INTEGER  shift, and go to state 3
+    FLOAT    shift, and go to state 4
+    '('      shift, and go to state 5
+
+    expr  go to state 15
+
+
+State 10
+
+    3 expr: • INTEGER
+    4     | • FLOAT
+    5     | • '(' expr ')'
+    6     | • expr '+' expr
+    7     | • expr '-' expr
+    8     | • expr '*' expr
+    8     | expr '*' • expr
+    9     | • expr '/' expr
+
+    INTEGER  shift, and go to state 3
+    FLOAT    shift, and go to state 4
+    '('      shift, and go to state 5
+
+    expr  go to state 16
+
+
+State 11
+
+    3 expr: • INTEGER
+    4     | • FLOAT
+    5     | • '(' expr ')'
+    6     | • expr '+' expr
+    7     | • expr '-' expr
+    8     | • expr '*' expr
+    9     | • expr '/' expr
+    9     | expr '/' • expr
+
+    INTEGER  shift, and go to state 3
+    FLOAT    shift, and go to state 4
+    '('      shift, and go to state 5
+
+    expr  go to state 17
+
+
+State 12
+
+    2 input: input expr ';' •
+
+    $default  reduce using rule 2 (input)
+
+
+State 13
+
+    5 expr: '(' expr ')' •
+
+    $default  reduce using rule 5 (expr)
+
+
+State 14
+
+    6 expr: expr • '+' expr
+    7     | expr • '-' expr
+    7     | expr '-' expr •  ['-', '+', ';', ')']
+    8     | expr • '*' expr
+    9     | expr • '/' expr
+
+    '*'  shift, and go to state 10
+    '/'  shift, and go to state 11
+
+    $default  reduce using rule 7 (expr)
+
+    Conflict between rule 7 and token '-' resolved as reduce (%left '-').
+    Conflict between rule 7 and token '+' resolved as reduce (%left '+').
+    Conflict between rule 7 and token '*' resolved as shift ('-' < '*').
+    Conflict between rule 7 and token '/' resolved as shift ('-' < '/').
+
+
+State 15
+
+    6 expr: expr • '+' expr
+    6     | expr '+' expr •  ['-', '+', ';', ')']
+    7     | expr • '-' expr
+    8     | expr • '*' expr
+    9     | expr • '/' expr
+
+    '*'  shift, and go to state 10
+    '/'  shift, and go to state 11
+
+    $default  reduce using rule 6 (expr)
+
+    Conflict between rule 6 and token '-' resolved as reduce (%left '-').
+    Conflict between rule 6 and token '+' resolved as reduce (%left '+').
+    Conflict between rule 6 and token '*' resolved as shift ('+' < '*').
+    Conflict between rule 6 and token '/' resolved as shift ('+' < '/').
+
+
+State 16
+
+    6 expr: expr • '+' expr
+    7     | expr • '-' expr
+    8     | expr • '*' expr
+    8     | expr '*' expr •  ['-', '+', '*', '/', ';', ')']
+    9     | expr • '/' expr
+
+    $default  reduce using rule 8 (expr)
+
+    Conflict between rule 8 and token '-' resolved as reduce ('-' < '*').
+    Conflict between rule 8 and token '+' resolved as reduce ('+' < '*').
+    Conflict between rule 8 and token '*' resolved as reduce (%left '*').
+    Conflict between rule 8 and token '/' resolved as reduce (%left '/').
+
+
+State 17
+
+    6 expr: expr • '+' expr
+    7     | expr • '-' expr
+    8     | expr • '*' expr
+    9     | expr • '/' expr
+    9     | expr '/' expr •  ['-', '+', '*', '/', ';', ')']
+
+    $default  reduce using rule 9 (expr)
+
+    Conflict between rule 9 and token '-' resolved as reduce ('-' < '/').
+    Conflict between rule 9 and token '+' resolved as reduce ('+' < '/').
+    Conflict between rule 9 and token '*' resolved as reduce (%left '*').
+    Conflict between rule 9 and token '/' resolved as reduce (%left '/').

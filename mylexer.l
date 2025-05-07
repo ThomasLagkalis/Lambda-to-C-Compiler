@@ -1,8 +1,10 @@
 %top{
   	#include <stdio.h>
   	#include <string.h>  
+  	#include "myanalyzer.tab.h"	
+  	#include "cgen.h"
 	
-	int lineNum = 1;
+	int line_num = 1;
 
 	#define MAX_MACROS 1024
 
@@ -41,19 +43,10 @@
 
 /* definitions */
 
-LOGICAL_OP ("and"|"or"|"not")
-BOOL_CONST ("True"|"False")
-KEYWORD ("integer"|"scalar"|"str"|"bool"|"True"|"False"|"const"|"if"|"else"|"endif"|"for"|"in"|"endfor"|"while"|"endwhile"|"break"|"continue"|"not"|"and"|"or"|"def"|"enddef"|"main"|"return"|"comp"|"endcomp"|"of")
 IDENTIFIER [A-Za-z][A-Za-z0-9_]*
-DIGIT [0-9]
-INTEGER [0-9][0-9]*
-FLOAT {INTEGER}("."{DIGIT}+)?([eE][+-]?{INTEGER})?
-ARITHMETIC_OP ("+"|"-"|"*"|"/"|"%"|"**")
-SIGNED_INT [-+]{INTEGER} 
-SIGNED_FLOAT [-+]{FLOAT}
-RELATIONAL_OP ("=="|"!="|"<"|"<="|">"|">=")
-ASSIGNMENT_OP ("="|"+="|"-="|"*="|"/="|"%="|":=")
-DELIMETER (";"|"("|")"|","|"["|"]"|":"|".")
+DIGITS [0-9]
+INTEGERS [0-9][0-9]*
+FLOATS {INTEGERS}("."{DIGITS}+)?([eE][+-]?{INTEGERS})?
 ESC_CHAR (\\[ntr\\"])
 CONST_STRING (\"([ .,a-zA-Z0-9\-+*/:_$%!#@&~^\(\)]|{ESC_CHAR})*\")
 
@@ -61,9 +54,36 @@ CONST_STRING (\"([ .,a-zA-Z0-9\-+*/:_$%!#@&~^\(\)]|{ESC_CHAR})*\")
 /* rules */
 
 %%
-{LOGICAL_OP} 		{ printf("token LOGICAL_OP %s\n", yytext);}
-{BOOL_CONST}		{ printf("token BOOL_CONST %s\n", yytext);}
-{KEYWORD}		    { printf("token KEYWORD %s\n", yytext);}
+{CONST_STRING} 		{  yylval.str = strdup(yytext); return CONST_STRING;}
+
+True    	{ yylval.str = strdup(yytext); return KW_TRUE;}
+False   	{ yylval.str = strdup(yytext); return KW_FALSE;}
+integer 	{ yylval.str = strdup(yytext); return KW_INTEGER;}
+scalar  	{ yylval.str = strdup(yytext); return KW_SCALAR;}
+str     	{ yylval.str = strdup(yytext); return KW_STR;}
+bool    	{ yylval.str = strdup(yytext); return KW_BOOL;}
+const   	{ yylval.str = strdup(yytext); return KW_CONST;}
+if      	{ yylval.str = strdup(yytext); return KW_IF;}
+else    	{ yylval.str = strdup(yytext); return KW_ELSE;}
+endif   	{ yylval.str = strdup(yytext); return KW_ENDIF;}
+for     	{ yylval.str = strdup(yytext); return KW_FOR;}
+in      	{ yylval.str = strdup(yytext); return KW_IN;}
+endfor  	{ yylval.str = strdup(yytext); return KW_ENDFOR;}
+while   	{ yylval.str = strdup(yytext); return KW_WHILE;}
+endwhile	{ yylval.str = strdup(yytext); return KW_ENDWHILE;}
+break   	{ yylval.str = strdup(yytext); return KW_BREAK;}
+continue   	{ yylval.str = strdup(yytext); return KW_CONTINUE;}
+not		   	{ yylval.str = strdup(yytext); return KW_NOT;}
+and 	   	{ yylval.str = strdup(yytext); return KW_AND;}
+or		   	{ yylval.str = strdup(yytext); return KW_OR;}
+def 	  	{ yylval.str = strdup(yytext); return KW_DEF;}
+enddef   	{ yylval.str = strdup(yytext); return KW_ENDDEF;}
+main	   	{ yylval.str = strdup(yytext); return KW_MAIN;}
+return    	{ yylval.str = strdup(yytext); return KW_RETURN;}
+comp	   	{ yylval.str = strdup(yytext); return KW_COMP;}
+endcomp   	{ yylval.str = strdup(yytext); return KW_ENDCOMP;}
+of		   	{ yylval.str = strdup(yytext); return KW_OF;}
+
 @defmacro[ \t]+([a-zA-Z_][a-zA-Z0-9_]*)[ \t]+([^ \t\n][^\n]*)[ \t]*\n {
     char macro_name[64], replacement[256];
     sscanf(yytext, "@defmacro %63s %255[^\n]", macro_name, replacement);
@@ -78,27 +98,40 @@ CONST_STRING (\"([ .,a-zA-Z0-9\-+*/:_$%!#@&~^\(\)]|{ESC_CHAR})*\")
         			yy_delete_buffer(YY_CURRENT_BUFFER);
         			yy_switch_to_buffer(old_buf);
     			} else {
-					printf("token IDENTIFIER %s\n", yytext);
+					yylval.str = strdup(yytext); return ID;
     			}
 }
-{DIGIT}				{ printf("token DIGIT %s\n", yytext);}
-{INTEGER} 			{ printf("token INTEGER %s\n", yytext);}
-{SIGNED_INT}		{ printf("token SIGNED_INT %s\n", yytext);}
-{FLOAT}				{ printf("token FLOAT %s\n", yytext);}
-{SIGNED_FLOAT} 		{ printf("token SIGNED_FLOAT %s\n", yytext);}
-{ARITHMETIC_OP} 	{ printf("token ARITHMETIC_OP %s\n", yytext);}
-{RELATIONAL_OP} 	{ printf("token RELATIONAL_OP %s\n", yytext);}
-{ASSIGNMENT_OP} 	{ printf("token ASSIGNMENT_OP %s\n", yytext);}
-{DELIMETER} 		{ printf("token DELIMETER %s\n", yytext);}
-{CONST_STRING} 		{ printf("token CONST_STRING %s\n", yytext);}
+
+"**"        { yylval.str = strdup(yytext); return OP_POWER;}
+":="        { yylval.str = strdup(yytext); return OP_ASSIGN ;}
+">="		{ yylval.str = strdup(yytext); return OP_GREATEREQUAL;}
+"<="		{ yylval.str = strdup(yytext); return OP_LESSEQUAL;}
+"=="		{ yylval.str = strdup(yytext); return OP_EQUAL;}
+"!="		{ yylval.str = strdup(yytext); return OP_INEQUAL;}
+"<"			return '<';
+">"			return '>';
+"+"         return '+';
+"-"         return '-';
+"*"         return '*';
+"/"         return '/';
+"%"			return '%';
+";"	    	return ';';
+":"	    	return ':';
+"."	    	return '.';
+","	    	return ',';
+"("	    	return '(';
+")"	    	return ')';
+"["	    	return '[';
+"]"	    	return ']';
+
+
+{INTEGERS} 				{ yylval.str = strdup(yytext); return INTEGER;}
+{FLOATS}				{ yylval.str = strdup(yytext); return FLOAT;}
 
 [ \r\t]+			/* skip whitespace */
 "//"[^\n]*  		/* skip line comments */
-\n 					{ lineNum++;}
-.           		{ printf("Line %d Lexical Error: Unrecognized literal %s\n", lineNum, yytext); return 0; }
+\n 					{ line_num++;}
+.           		{ printf("Line %d Lexical Error: Unrecognized literal %s\n", line_num, yytext); return 0; }
 
 %%
-/* user code */
-int main() {
-yylex();
-}
+
