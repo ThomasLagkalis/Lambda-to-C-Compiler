@@ -58,41 +58,47 @@ extern int yydebug;
     INTEGER = 259,                 /* INTEGER  */
     FLOAT = 260,                   /* FLOAT  */
     CONST_STRING = 261,            /* CONST_STRING  */
-    ASSIGN = 262,                  /* ASSIGN  */
-    KW_IF = 263,                   /* KW_IF  */
-    KW_ENDIF = 264,                /* KW_ENDIF  */
-    KW_THEN = 265,                 /* KW_THEN  */
-    KW_ELSE = 266,                 /* KW_ELSE  */
-    KW_FOR = 267,                  /* KW_FOR  */
-    KW_ENDFOR = 268,               /* KW_ENDFOR  */
-    KW_TRUE = 269,                 /* KW_TRUE  */
-    KW_FALSE = 270,                /* KW_FALSE  */
-    KW_INTEGER = 271,              /* KW_INTEGER  */
-    KW_SCALAR = 272,               /* KW_SCALAR  */
-    KW_STR = 273,                  /* KW_STR  */
-    KW_BOOL = 274,                 /* KW_BOOL  */
-    KW_CONST = 275,                /* KW_CONST  */
-    KW_IN = 276,                   /* KW_IN  */
-    KW_WHILE = 277,                /* KW_WHILE  */
-    KW_ENDWHILE = 278,             /* KW_ENDWHILE  */
-    KW_BREAK = 279,                /* KW_BREAK  */
-    KW_CONTINUE = 280,             /* KW_CONTINUE  */
-    KW_NOT = 281,                  /* KW_NOT  */
-    KW_AND = 282,                  /* KW_AND  */
-    KW_OR = 283,                   /* KW_OR  */
-    KW_DEF = 284,                  /* KW_DEF  */
-    KW_ENDDEF = 285,               /* KW_ENDDEF  */
-    KW_MAIN = 286,                 /* KW_MAIN  */
-    KW_RETURN = 287,               /* KW_RETURN  */
-    KW_COMP = 288,                 /* KW_COMP  */
-    KW_ENDCOMP = 289,              /* KW_ENDCOMP  */
-    KW_OF = 290,                   /* KW_OF  */
+    KW_IF = 262,                   /* KW_IF  */
+    KW_ENDIF = 263,                /* KW_ENDIF  */
+    KW_THEN = 264,                 /* KW_THEN  */
+    KW_ELSE = 265,                 /* KW_ELSE  */
+    KW_FOR = 266,                  /* KW_FOR  */
+    KW_ENDFOR = 267,               /* KW_ENDFOR  */
+    KW_TRUE = 268,                 /* KW_TRUE  */
+    KW_FALSE = 269,                /* KW_FALSE  */
+    KW_INTEGER = 270,              /* KW_INTEGER  */
+    KW_SCALAR = 271,               /* KW_SCALAR  */
+    KW_STR = 272,                  /* KW_STR  */
+    KW_BOOL = 273,                 /* KW_BOOL  */
+    KW_CONST = 274,                /* KW_CONST  */
+    KW_IN = 275,                   /* KW_IN  */
+    KW_WHILE = 276,                /* KW_WHILE  */
+    KW_ENDWHILE = 277,             /* KW_ENDWHILE  */
+    KW_BREAK = 278,                /* KW_BREAK  */
+    KW_CONTINUE = 279,             /* KW_CONTINUE  */
+    KW_NOT = 280,                  /* KW_NOT  */
+    KW_AND = 281,                  /* KW_AND  */
+    KW_OR = 282,                   /* KW_OR  */
+    KW_DEF = 283,                  /* KW_DEF  */
+    KW_ENDDEF = 284,               /* KW_ENDDEF  */
+    KW_MAIN = 285,                 /* KW_MAIN  */
+    KW_RETURN = 286,               /* KW_RETURN  */
+    KW_COMP = 287,                 /* KW_COMP  */
+    KW_ENDCOMP = 288,              /* KW_ENDCOMP  */
+    KW_OF = 289,                   /* KW_OF  */
+    DOT = 290,                     /* DOT  */
     OP_POWER = 291,                /* OP_POWER  */
-    OP_ASSIGN = 292,               /* OP_ASSIGN  */
-    OP_LESSEQUAL = 293,            /* OP_LESSEQUAL  */
-    OP_GREATEREQUAL = 294,         /* OP_GREATEREQUAL  */
-    OP_EQUAL = 295,                /* OP_EQUAL  */
-    OP_INEQUAL = 296               /* OP_INEQUAL  */
+    OP_LESSEQUAL = 292,            /* OP_LESSEQUAL  */
+    OP_GREATEREQUAL = 293,         /* OP_GREATEREQUAL  */
+    OP_EQUAL = 294,                /* OP_EQUAL  */
+    OP_INEQUAL = 295,              /* OP_INEQUAL  */
+    ASSIGN = 296,                  /* ASSIGN  */
+    ASSIGN_PLUS = 297,             /* ASSIGN_PLUS  */
+    ASSIGN_MINUS = 298,            /* ASSIGN_MINUS  */
+    ASSIGN_PRODUCT = 299,          /* ASSIGN_PRODUCT  */
+    ASSIGN_DIV = 300,              /* ASSIGN_DIV  */
+    ASSIGN_MOD = 301,              /* ASSIGN_MOD  */
+    ASSIGN_DOTS = 302              /* ASSIGN_DOTS  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -101,12 +107,12 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 10 "myanalyzer.y"
+#line 36 "myanalyzer.y"
 
   char* str;
   int num;
 
-#line 110 "myanalyzer.tab.h"
+#line 116 "myanalyzer.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

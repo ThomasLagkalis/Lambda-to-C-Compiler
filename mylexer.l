@@ -102,12 +102,17 @@ of		   	{ yylval.str = strdup(yytext); return KW_OF;}
     			}
 }
 
-"**"        { yylval.str = strdup(yytext); return OP_POWER;}
-":="        { yylval.str = strdup(yytext); return OP_ASSIGN ;}
+"**"        	{ yylval.str = strdup(yytext); return OP_POWER;}
 ">="		{ yylval.str = strdup(yytext); return OP_GREATEREQUAL;}
 "<="		{ yylval.str = strdup(yytext); return OP_LESSEQUAL;}
 "=="		{ yylval.str = strdup(yytext); return OP_EQUAL;}
 "!="		{ yylval.str = strdup(yytext); return OP_INEQUAL;}
+"+="		{ yylval.str = strdup(yytext); return ASSIGN_PLUS;}
+"-="		{ yylval.str = strdup(yytext); return ASSIGN_MINUS;}
+"*="		{ yylval.str = strdup(yytext); return ASSIGN_PRODUCT;}
+"/="		{ yylval.str = strdup(yytext); return ASSIGN_DIV;}
+"%="		{ yylval.str = strdup(yytext); return ASSIGN_MOD;}
+":="		{ yylval.str = strdup(yytext); return ASSIGN_DOTS;}
 "<"			return '<';
 ">"			return '>';
 "+"         return '+';
@@ -117,7 +122,7 @@ of		   	{ yylval.str = strdup(yytext); return KW_OF;}
 "%"			return '%';
 ";"	    	return ';';
 ":"	    	return ':';
-"."	    	return '.';
+"."	    	return DOT;
 ","	    	return ',';
 "("	    	return '(';
 ")"	    	return ')';

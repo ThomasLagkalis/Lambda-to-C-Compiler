@@ -1,2 +1,5 @@
-2    +      3    -   4 * (4-5)/7;
-1 + 2 + 3 -                4*(4-5)/7;
+a := [i for i:100]:integer;
+
+half := [ x / 2 for x: integer in a of 100] : scalar;
+
+a, b: integer;
