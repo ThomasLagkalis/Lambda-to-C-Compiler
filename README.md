@@ -1,5 +1,2 @@
-Completed so far:
-    1. "Toy" lexer
+# Lambda-to-C-Compiler
 
-TO DO:
-    2. Work on bison for the second part.
