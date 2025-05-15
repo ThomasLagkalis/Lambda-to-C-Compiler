@@ -1,6 +1,7 @@
 %top{
   	#include <stdio.h>
   	#include <string.h>  
+  	#include <stdlib.h>	
   	#include "myanalyzer.tab.h"	
   	#include "cgen.h"
 	
@@ -73,9 +74,9 @@ while   	{ yylval.str = strdup(yytext); return KW_WHILE;}
 endwhile	{ yylval.str = strdup(yytext); return KW_ENDWHILE;}
 break   	{ yylval.str = strdup(yytext); return KW_BREAK;}
 continue   	{ yylval.str = strdup(yytext); return KW_CONTINUE;}
-not		   	{ yylval.str = strdup(yytext); return KW_NOT;}
+not		{ yylval.str = strdup(yytext); return KW_NOT;}
 and 	   	{ yylval.str = strdup(yytext); return KW_AND;}
-or		   	{ yylval.str = strdup(yytext); return KW_OR;}
+or		{ yylval.str = strdup(yytext); return KW_OR;}
 def 	  	{ yylval.str = strdup(yytext); return KW_DEF;}
 enddef   	{ yylval.str = strdup(yytext); return KW_ENDDEF;}
 main	   	{ yylval.str = strdup(yytext); return KW_MAIN;}
@@ -84,24 +85,22 @@ comp	   	{ yylval.str = strdup(yytext); return KW_COMP;}
 endcomp   	{ yylval.str = strdup(yytext); return KW_ENDCOMP;}
 of		   	{ yylval.str = strdup(yytext); return KW_OF;}
 
-@defmacro[ \t]+([a-zA-Z_][a-zA-Z0-9_]*)[ \t]+([^ \t\n][^\n]*)[ \t]*\n {
+@defmacro[ \t]+{IDENTIFIER}[ \t]+.+ {
     char macro_name[64], replacement[256];
     sscanf(yytext, "@defmacro %63s %255[^\n]", macro_name, replacement);
     add_macro(macro_name, replacement);
 }
 {IDENTIFIER} 		{ const char* repl = get_macro_replacement(yytext);
     				if (repl) {
-        			// Replace macro inline by pushing replacement to the input stream
-        			YY_BUFFER_STATE old_buf = YY_CURRENT_BUFFER;
-        			yy_scan_string(repl);
-        			yylex();  // Process the replacement immediately
-        			yy_delete_buffer(YY_CURRENT_BUFFER);
-        			yy_switch_to_buffer(old_buf);
+    				// unput(ch) puts the character ch back into the input stream.
+        			for(int i=strlen(repl); i>0; i--) unput(repl[i-1]);
     			} else {
 					yylval.str = strdup(yytext); return ID;
     			}
 }
 
+"->"		{ yylval.str = strdup(yytext); return ARROW; }
+"="		{ yylval.str = strdup(yytext); return ASSIGN;}
 "**"        	{ yylval.str = strdup(yytext); return OP_POWER;}
 ">="		{ yylval.str = strdup(yytext); return OP_GREATEREQUAL;}
 "<="		{ yylval.str = strdup(yytext); return OP_LESSEQUAL;}

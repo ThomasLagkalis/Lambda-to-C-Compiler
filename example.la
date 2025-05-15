@@ -1,5 +1,9 @@
-a := [i for i:100]:integer;
 
-half := [ x / 2 for x: integer in a of 100] : scalar;
 
-a, b: integer;
+def main():
+	while (a==1): 
+		a+=1; 
+		i = foo();
+		s = bar(a);
+	endwhile;
+enddef;
