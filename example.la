@@ -1,9 +1,0 @@
-
-
-def main():
-	while (a==1): 
-		a+=1; 
-		i = foo();
-		s = bar(a);
-	endwhile;
-enddef;

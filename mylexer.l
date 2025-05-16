@@ -5,7 +5,9 @@
   	#include "myanalyzer.tab.h"	
   	#include "cgen.h"
 	
+	extern int inside_comp;
 	int line_num = 1;
+
 
 	#define MAX_MACROS 1024
 
@@ -45,6 +47,7 @@
 /* definitions */
 
 IDENTIFIER [A-Za-z][A-Za-z0-9_]*
+COMPLEX_IDENTIFIER "#"[A-Za-z][A-Za-z0-9_]*
 DIGITS [0-9]
 INTEGERS [0-9][0-9]*
 FLOATS {INTEGERS}("."{DIGITS}+)?([eE][+-]?{INTEGERS})?
@@ -90,14 +93,22 @@ of		   	{ yylval.str = strdup(yytext); return KW_OF;}
     sscanf(yytext, "@defmacro %63s %255[^\n]", macro_name, replacement);
     add_macro(macro_name, replacement);
 }
-{IDENTIFIER} 		{ const char* repl = get_macro_replacement(yytext);
-    				if (repl) {
-    				// unput(ch) puts the character ch back into the input stream.
-        			for(int i=strlen(repl); i>0; i--) unput(repl[i-1]);
-    			} else {
-					yylval.str = strdup(yytext); return ID;
-    			}
+
+{COMPLEX_IDENTIFIER} {
+			yylval.str = strdup(yytext + 1); // Drop the "#"
+        		return COMP_ID;
 }
+
+{IDENTIFIER} 		{ 
+			const char* repl = get_macro_replacement(yytext);
+    			if (repl) {
+    			// unput(ch) puts the character ch back into the input stream.
+        		for(int i=strlen(repl); i>0; i--) unput(repl[i-1]);
+    			} else {
+			yylval.str = strdup(yytext); return ID;
+    			}
+			}
+
 
 "->"		{ yylval.str = strdup(yytext); return ARROW; }
 "="		{ yylval.str = strdup(yytext); return ASSIGN;}
@@ -133,7 +144,7 @@ of		   	{ yylval.str = strdup(yytext); return KW_OF;}
 {FLOATS}				{ yylval.str = strdup(yytext); return FLOAT;}
 
 [ \r\t]+			/* skip whitespace */
-"//"[^\n]*  		/* skip line comments */
+"--"[^\n]*  			/* skip line comments */
 \n 					{ line_num++;}
 .           		{ printf("Line %d Lexical Error: Unrecognized literal %s\n", line_num, yytext); return 0; }
 
