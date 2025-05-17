@@ -1,3 +1,9 @@
+/*
+Author: Thomas Lagkalis
+Institution: TU Crete
+Contact: tlagkalis@tuc.gr, thomaslagkalis@gmail.com
+Last date modified: 17/5/2025
+*/
 /*----------------------------------------------------- Prologue ----------------------------------------------------- */
 %{
   #include <stdio.h>
@@ -10,17 +16,27 @@
   extern int line_num;
   int inside_comp = 0;
   
-  typedef struct comp_type {
+typedef struct comp_type {
     char *name;
+    struct comp_field *fields;     // head of this struct’s field list 
     struct comp_type *next;
   } comp_type;
-
+  
+typedef struct comp_field {
+    char          *name;     // e.g. "address_name"
+    char          *type;     // e.g. "Address" 
+    int            is_struct;// 1 if type is user‐defined, 0 otherwise 
+    struct comp_field *next;
+} comp_field;
+	
   comp_type *comp_type_list = NULL;
+  comp_type *current_comp   = NULL;
 
   void add_comp_type(const char *name) {
     comp_type *new_type = (comp_type *)malloc(sizeof(comp_type));
     new_type->name = strdup(name);
     new_type->next = comp_type_list;
+    new_type->fields = NULL;
     comp_type_list = new_type;
   }
 
@@ -32,6 +48,15 @@
     }
     return 0;
   }
+  
+  void add_comp_field(comp_type *ct, const char *fname, const char *ftype) {
+    comp_field *f = malloc(sizeof(*f));
+    f->name      = strdup(fname);
+    f->type      = strdup(ftype);
+    f->is_struct = is_comp_type(ftype);
+    f->next      = ct->fields;
+    ct->fields   = f;
+}
 
   void free_comp_types() {
     comp_type *current = comp_type_list;
@@ -213,7 +238,7 @@ char* get_func_with_body(char* cname) {
         // Start building constructor
         char constructor_start[256];
         int len = snprintf(constructor_start, sizeof(constructor_start),
-                 "%s ctor_%s = {", cname, cname);
+                 "const %s ctor_%s = {", cname, cname);
         
         // Check buffer space and append start
         if (used + len + 1 > bufsize) {
@@ -254,6 +279,64 @@ char* get_func_with_body(char* cname) {
                 first = 0;
             current = current->next;
         }
+        
+       // now emit any nested‐struct fields as ctor entries 
+for (comp_field *f = comp_current->fields; f; f = f->next) {
+    if (!f->is_struct) continue;
+
+    /* comma prefix if needed */
+    char prefix[3] = { first ? '\0' : ',', '\0' };
+
+    char field_entry[256];
+    int flen;
+
+    /* detect array by looking for '[' in the field name */
+    char *br = strchr(f->name, '[');
+    if (br) {
+        /* split "name[len]" into root="name", len_str="len" */
+        char root[128], len_str[32];
+        if (sscanf(f->name, "%127[^[][%31[^]]]", root, len_str) == 2) {
+            /* emit .root = { [0 ... len-1] = ctor_Type } */
+            flen = snprintf(field_entry, sizeof(field_entry),
+                "%s.%s = { [0 ... %s - 1] = ctor_%s }",
+                prefix,
+                root,
+                len_str,
+                f->type
+            );
+        } else {
+            /* fallback if parsing fails */
+            flen = snprintf(field_entry, sizeof(field_entry),
+                "%s.%s = ctor_%s",
+                prefix,
+                f->name,
+                f->type
+            );
+        }
+    } else {
+        /* normal scalar field */
+        flen = snprintf(field_entry, sizeof(field_entry),
+            "%s.%s = ctor_%s",
+            prefix,
+            f->name,
+            f->type
+        );
+    }
+
+    /* ensure buffer space */
+    if (used + flen + 1 > bufsize) {
+        bufsize *= 2;
+        result = realloc(result, bufsize);
+        if (!result) return NULL;
+    }
+    /* append to result */
+    memcpy(result + used, field_entry, flen);
+    used += flen;
+
+    first = 0;
+}
+
+
 
         // Close constructor
         char constructor_end[] = "};\n\n";
@@ -384,7 +467,7 @@ char* get_func_with_body(char* cname) {
 %type <str> comp_id_recursion
 %type <str> main_func
 %type <str> prog
-%type <str> func_statement
+//%type <str> func_statement
 %type <str> func_statement_args
 %type <str> single_statement
 %type <str> assign_statement
@@ -392,8 +475,9 @@ char* get_func_with_body(char* cname) {
 %type <str> if_statement
 %type <str> for_statement
 %type <str> while_statement
-%type <str> loop_body
+%type <str> func_call
 
+%nonassoc INDEXING
 %right INTEGER
 %right ASSIGN_PLUS
 %right ASSIGN_MINUS
@@ -402,6 +486,7 @@ char* get_func_with_body(char* cname) {
 %right ASSIGN_MOD
 %right ASSIGN_DOTS
 %right ASSIGN
+%right ':'
 %left KW_OR
 %left KW_AND
 %right KW_NOT
@@ -412,11 +497,12 @@ char* get_func_with_body(char* cname) {
 %left '>' '<'
 %left '-' '+' '*' '/' '%'
 %right OP_POWER 
+%nonassoc CALL
+%left DOT
 %left '(' 
 %left ')'  
 %left '[' 
 %left ']' 
-%left '.'
 
 %start start
 /*----------------------------------------------------- Grammar Rules ----------------------------------------------------- */
@@ -427,6 +513,7 @@ prog
 { 
   if (yyerror_count == 0) {
     puts(c_prologue);
+    printf("------------ Prog ------------\n\n");
     printf("%s", $1); 
   }  
 }
@@ -477,8 +564,15 @@ KW_INTEGER	            {$$ = template("int"); }
 ;
 
 comp_start:
-KW_COMP ID 			{inside_comp = 1; $$ = $2;}
+KW_COMP ID 			
+{
+inside_comp = 1;
+ $$ = $2;
+ add_comp_type($2);
+ current_comp = comp_type_list;
+    }
 ;
+
 
 comp_decl:
 comp_start':' comp_var_decl KW_ENDCOMP ';'			
@@ -490,7 +584,6 @@ $$ = template("typedef struct %s {\n%s\n}%s;", $1, $3, $1 );
 | comp_start ':' comp_var_decl many_funcs KW_ENDCOMP ';'		
 {
     inside_comp = 0;
-    add_comp_type($1);
     char *signatures = get_func_signatures($1);
     char *funcs_with_body = get_func_with_body($1);
     $$ = template("typedef struct %s {\n%s\n%s\n}%s;\n\n%s", $1, $3, signatures ? signatures : "", $1, funcs_with_body ? funcs_with_body : ""); 
@@ -506,9 +599,18 @@ many_funcs func_decl			{ $$ = template("%s\n%s", $1, $2); }
 ;
 
 comp_var_decl:
- comp_id_recursion ':' data_type ';'			{ $$ = template("%s %s;", $3, $1); }
-| comp_id_recursion ':' data_type ';' comp_var_decl	{ $$ = template("%s %s;\n%s", $3, $1, $5); }
+ comp_id_recursion ':' data_type ';'			
+ {
+  $$ = template("%s %s;", $3, $1);
+  add_comp_field(current_comp,  $1, $3); // Add fields to field list.
+   }
+| comp_id_recursion ':' data_type ';' comp_var_decl	
+{
+ $$ = template("%s %s;\n%s", $3, $1, $5);
+ add_comp_field(current_comp,  $1, $3); // Add fields to field list.
+ }
 ;
+
 
 comp_id_recursion:
 COMP_ID 				{ $$ = $1; }
@@ -517,8 +619,51 @@ COMP_ID 				{ $$ = $1; }
 ;
 
 var_decl:
-id_recursion ':' data_type ';'	  	  { $$ = template("%s %s;", $3, $1); }
+id_recursion ':' data_type ';'
+  {
+    const char *type = $3;
+    const char *names = $1;
+
+    if (is_comp_type(type)) {
+        /* Build a string like:
+         *    Foo a = ctor_Foo, b = ctor_Foo, c = ctor_Foo;
+         */
+        char buf[1024] = {0};
+        char *copy = strdup(names);
+        char *tok = strtok(copy, ",");
+        int first = 1;
+        while (tok) {
+            /* trim leading/trailing spaces */
+            while (*tok == ' ') tok++;
+            char *end = tok + strlen(tok) - 1;
+            while (end > tok && *end == ' ') *end-- = '\0';
+
+            if (first) {
+                snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf),
+                         "%s %s = ctor_%s",
+                         type, tok, type);
+                first = 0;
+            } else {
+                snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf),
+                         ", %s = ctor_%s",
+                         tok, type);
+            }
+            tok = strtok(NULL, ",");
+        }
+        free(copy);
+        /* append the semicolon */
+        snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), ";");
+
+        /* return it */
+        $$ = strdup(buf);
+    }
+    else {
+        /* primitive or unknown type: leave as-is */
+        $$ = template("%s %s;", type, names);
+    }
+  }
 ;
+
 
 id_recursion:
 ID 			{ $$ = $1; }
@@ -526,8 +671,8 @@ ID 			{ $$ = $1; }
 ;
  
  array_decl:
-'[' ']' ':' data_type ';'		{ $$ = template("%s*", $4); } 
-| ID '[' expr ']' ':' data_type	';'	{ $$ = template("%s %s[%s]", $6, $1, $3); }	 
+'[' ']' ':' data_type ';'		{ $$ = template("%s*;", $4); } 
+| ID '[' expr ']' ':' data_type	';' 	{ $$ = template("%s %s[%s];", $6, $1, $3); }	 
 ;
 
 number_or_str:
@@ -537,15 +682,15 @@ INTEGER 		    { $$ = $1; }
 ;
 
 const_decl:
-KW_CONST ID ASSIGN number_or_str ':' data_type ';'		{ $$ = template("const %s %s = %s", $6, $2, $4); }	
+KW_CONST ID ASSIGN number_or_str ':' data_type ';'		{ $$ = template("const %s %s = %s;", $6, $2, $4); }	
 ;
 
 func_args:
 %empty						{ $$ = "" ; }
+| func_args ',' ID ':' data_type 		{ $$ = template("%s, %s %s", $1, $5, $3); }
+| func_args ',' ID '[' ']' ':' data_type	{ $$ = template("%s, %s* %s", $1, $7, $3); }
 | ID ':' data_type				{ $$ = template("%s %s", $3, $1); }
-| ID ':' data_type ',' func_args		{ $$ = template("%s %s, %s", $3, $1, $5); }
 | ID '[' ']' ':' data_type			{ $$ = template("%s* %s", $5, $1); }
-| ID '[' ']' ':' data_type ',' func_args		{ $$ = template("%s* %s, %s", $5, $1, $5); }
 ;
 
 // Fucntion with or without body
@@ -577,25 +722,31 @@ else{
 ;
 /* --------------------------------------------------- Statements Rules --------------------------------------------------------*/
 single_statement:
-assign_statement ';'				{ $$ = template("%s;",$1); }
-| func_statement ';'				{ $$ = template("%s;",$1); }
+assign_statement 				{ $$ = template("%s;",$1); }
+//| expr ';'       				{ $$ = template("%s;", $1); }
 | return_statement ';'				{ $$ = $1; }
-| arrays ';'					{ $$ = $1; }
+| arrays ';'					{ $$ = template("%s;",$1); }
 | if_statement ';'				{ $$ = $1; }
 | for_statement	';'				{ $$ = $1; }
 | while_statement ';'				{ $$ = $1; }
-| id_expr ';'					{ $$ = $1; }
+| id_expr ';'					{ $$ = template("%s;",$1); }
+| KW_BREAK ';'					{ $$ = template("break;"); }
+| KW_CONTINUE ';' 				{ $$ = template("continue;"); }
 | ';'						{ $$ = ";"; }
 ;
 
 assign_statement:
 //ID ASSIGN func_statement 			{ $$ = template("%s = %s;", $1, $3); }
- assign_expr 					{ $$ = $1; }
+ assign_expr ';'					{ $$ = $1; }
+ | ID '[' expr ']' ASSIGN expr ';'	 	{ $$ = template("%s[%s] = %s;", $1, $3, $6); } 
+ | ID '[' expr ']' ASSIGN ID ';'	 	{ $$ = template("%s[%s] = %s;", $1, $3, $6); }
 ;
 
+/*
 func_statement:
 ID '(' func_statement_args ')' 			{ $$ = template("%s(%s)", $1, $3); }
 ;
+*/
 
 func_statement_args:
 %empty						{ $$ = "" ; }
@@ -615,21 +766,15 @@ KW_IF '(' expr ')' ':' body KW_ENDIF 				{ $$ = template("if (%s){\n%s\n}", $3, 
 
 
 for_statement:
-KW_FOR ID KW_IN '[' expr ':' expr ':' expr ']' ':' loop_body KW_ENDFOR 
+KW_FOR ID KW_IN '[' expr ':' expr ':' expr ']' ':' body KW_ENDFOR 
 { $$ = template("for (int %s = %s; %s<=%s; %s+=%s){\n%s\n}", $2, $5, $2, $7, $2, $9, $12); }
-| KW_FOR ID KW_IN '[' expr ':' expr ']' ':' loop_body KW_ENDFOR 	
+| KW_FOR ID KW_IN '[' expr ':' expr ']' ':' body KW_ENDFOR 	
 { $$ = template("for (int %s = %s; %s<=%s; %s++){\n%s\n}", $2, $5, $2, $7, $2, $10); }
 ;
 
 while_statement:
-KW_WHILE '(' expr ')' ':' loop_body KW_ENDWHILE		
+KW_WHILE '(' expr ')' ':' body KW_ENDWHILE		
 { $$ = template("while(%s){\n%s\n}",$3, $6); }
-;
-
-loop_body:
-body				{ $$ = $1; }
-| KW_BREAK 			{ $$ = template("break;"); }
-| KW_CONTINUE	 		{ $$ = template("continue;"); }
 ;
 
 // Arrays Comprehensions
@@ -645,22 +790,22 @@ ID ASSIGN_DOTS '[' expr KW_FOR ID ':' INTEGER ']' ':' data_type
 	char transformed_expr[512];
 	replace_identifier($4, $6, indexed_access, transformed_expr);  // replace identidier with array[array_i]
 
-	$$ = template("%s* %s = (%s*)malloc(%s * sizeof(%s));\n for (int %s_i = 0; %s_i < %s; ++%s_i)\n\t %s[%s] = %s", $15, $1, $15, $12, $15, $10, $10, $12, $10, $1, $10, transformed_expr);
+	$$ = template("%s* %s = (%s*)malloc(%s * sizeof(%s));\n for (int %s_i = 0; %s_i < %s; ++%s_i)\n\t %s[%s_i] = %s", $15, $1, $15, $12, $15, $10, $10, $12, $10, $1, $10, transformed_expr);
 }
 ;
 
 /* --------------------------------------------------- Expression Rules --------------------------------------------------------*/
 
 expr:
-func_statement		{ $$ = $1; }
-| str_expr		{ $$ = $1; }	
-| id_expr		{ $$ = $1; }
-| assign_expr 		{ $$ = $1; }
-| boolean_expr 		{ $$ = $1; }
-| relation_expr		{ $$ = $1; }
-| arithmetic_expr	{ $$ = $1; }
-| '[' expr ')'		{ $$ = template("[ %s ]", $2); }
-| '(' expr ')'		{ $$ = template("( %s )", $2); }
+//ID '(' func_statement_args ')'  { $$ = template("%s(%s)", $1, $3); }
+ str_expr			{ $$ = $1; }	
+| id_expr			{ $$ = $1; }
+| assign_expr 			{ $$ = $1; }
+| boolean_expr 			{ $$ = $1; }
+| relation_expr			{ $$ = $1; }
+| arithmetic_expr		{ $$ = $1; }
+//| '[' expr ']'		{ $$ = template("[ %s ]", $2); }
+| '(' expr ')'			{ $$ = template("( %s )", $2); }
 ;
 
 boolean_expr:
@@ -675,25 +820,45 @@ str_expr:
 CONST_STRING		{ $$ = $1; }
 ;
 
+// id_expr: handles arbitrarily deep chains of fields, arrays, calls 
 id_expr:
-ID DOT id_expr						{ $$ = template("%s.%s", $1, $3); }
-| ID DOT func_statement 	   			{ $$ = template("%s.%s", $1, $3); }
-| COMP_ID						{ $$ = template("self->%s", $1); }
-| COMP_ID DOT ID '(' func_statement_args ')'    	
-{ if (strcmp($5, "") == 0) $$ = template("self->%s.%s(&self->%s %s);", $1, $3, $1, $5); else $$ = template("self->%s.%s(&self->%s, %s);", $1, $3, $1, $5);}
-| COMP_ID DOT id_expr					{ $$ = template("self->%s.%s", $1, $3); }
-| ID '[' expr ']' 					{ $$ = template("%s[%s]", $1, $3); }
-| ID '[' expr ']' DOT func_statement			{ $$ = template("%s[%s].%s;", $1, $3, $6); }
-| ID '[' expr ']' DOT id_expr 				{ $$ = template("%s[%s].%s", $1, $3, $6); }
-| COMP_ID '[' expr ']'					{ $$ = template("self->%s[%s]", $1, $3); }
-| COMP_ID '[' expr ']' DOT ID '(' func_statement_args ')'		
-{if (strcmp($8, "") == 0) $$ = template("self->%s[%s].%s(&self->%s[%s] %s);", $1, $3, $6, $1, $3, $8 ); else $$ = template("self->%s[%s].%s(&self->%s[i], %s);"), $1, $3, $6, $1, $3, $8; }
-| COMP_ID '[' expr ']' DOT id_expr 			{ $$ = template("self->%s[%s].%s", $1, $3, $6); }
-| ID 							{ $$ = $1; }
+    // base cases
+    ID
+        { $$ = $1; }
+    | COMP_ID
+        { $$ = template("self->%s", $1); }
+    // then recurse: tack on [ ] or .field or calls                        
+    | id_expr '[' expr ']'					
+        { $$ = template("%s[%s]",       $1, $3); }
+    | id_expr DOT ID						%prec CALL
+        { $$ = template("%s.%s",       $1, $3); }
+    | id_expr DOT COMP_ID					%prec CALL
+        { $$ = template("%s.%s",       $1, $3); }                     
+    //| id_expr '(' ')'
+    //    { $$ = template("%s()",         $1); }
+    | id_expr '(' func_statement_args ')'
+        { $$ = template("%s(%s)", $1, $3); }
+    //| id_expr DOT ID '(' ')'
+    //    { $$ = template("%s.%s(&%s)", $1, $3, $1); }
+    //| id_expr DOT ID '(' func_statement_args ')'
+    //    { $$ = template("%s.%s(&%s, %s)", $1, $3, $1, $5); }     
+    | func_call			{ $$ = $1; }                      
+    //| id_expr DOT COMP_ID '(' ')'
+     //   { $$ = template("%s.%s(&%s)", $1, $3, $1); }
+    //| id_expr DOT COMP_ID '(' func_statement_args ')'
+    //    { $$ = template("%s.%s(&%s, %s)",$1, $3, $1, $5); }
+    ;
+    
+func_call:
+id_expr DOT ID '(' func_statement_args ')'     
+{ if (strcmp($5, "")) $$ = template("%s.%s(&%s, %s)", $1, $3, $1, $5); else $$ = template("%s.%s(&%s %s)", $1, $3, $1, $5); }
+| id_expr DOT COMP_ID '(' func_statement_args ')'     
+{ if(strcmp($5, "")) $$ = template("%s.%s(&%s, %s)", $1, $3, $1, $5); else $$ = template("%s.%s(&%s %s)", $1, $3, $1, $5); }    
 ;
 
+
 relation_expr: 
- expr OP_EQUAL expr 		{ $$ = template("%s == %s", $1, $3); }
+ expr OP_EQUAL expr 	 	{ $$ = template("%s == %s", $1, $3); }
 | expr OP_INEQUAL expr 		{ $$ = template("%s != %s", $1, $3); }
 | expr '<' expr 		{ $$ = template("%s < %s", $1, $3); }
 | expr '>' expr			{ $$ = template("%s > %s", $1, $3); }
