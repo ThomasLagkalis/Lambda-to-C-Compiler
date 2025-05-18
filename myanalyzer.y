@@ -513,7 +513,7 @@ prog
 { 
   if (yyerror_count == 0) {
     puts(c_prologue);
-    printf("------------ Prog ------------\n\n");
+    printf("/*------------ Prog ------------*/\n\n");
     printf("%s", $1); 
   }  
 }
@@ -739,7 +739,7 @@ assign_statement:
 //ID ASSIGN func_statement 			{ $$ = template("%s = %s;", $1, $3); }
  assign_expr ';'					{ $$ = $1; }
  | ID '[' expr ']' ASSIGN expr ';'	 	{ $$ = template("%s[%s] = %s;", $1, $3, $6); } 
- | ID '[' expr ']' ASSIGN ID ';'	 	{ $$ = template("%s[%s] = %s;", $1, $3, $6); }
+ | ID '[' expr ']' ASSIGN ID ';'	 	{ $$ = template("%s[%s] = %s", $1, $3, $6); }
 ;
 
 /*
